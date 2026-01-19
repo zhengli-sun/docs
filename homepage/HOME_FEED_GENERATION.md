@@ -1,5 +1,7 @@
 # Roo Home Feed Generation Audit
 
+> **Note:** This document covers the **legacy Roo/Deliveroo** home feed system in `roo/co-restaurants`. For the **Pedregal/DoorDash Feed system** (the new unified architecture), see [FEED_ONBOARDING_GUIDE.md](./FEED_ONBOARDING_GUIDE.md).
+
 ## Overview
 
 This document provides a holistic audit of how the Home Feed is generated in the `roo/co-restaurants` repository. The home feed is the core consumer experience, displaying a personalized list of restaurants and other content.
