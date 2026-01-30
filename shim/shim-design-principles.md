@@ -1,8 +1,3 @@
----
-description: Guiding principles for building shims between Pedregal and legacy systems (DoorDash, Wolt)
-last_updated: 2026-01-30
----
-
 # Shim Design Principles for Pedregal
 
 Guiding principles for building shims that bridge Pedregal to legacy services.
@@ -23,39 +18,6 @@ Before implementing a shim, carefully evaluate against building natively in Pedr
 | Tech debt accumulation | Incremental migration |
 | Dual maintenance burden | Risk mitigation (fallback) |
 | Debugging across boundaries | Parallel development |
-
-### Example
-
-**Scenario**: Feed node needs consumer subscription tier information.
-
-| Approach | Timeline | Trade-off |
-|----------|----------|-----------|
-| Shim to DashPass service | 1 week | Fast, but adds latency + coupling |
-| Native in Subscription node | 3 weeks | Clean domain model, no coupling |
-
-**Decision**: If Feed launch is blocked and Subscription node is 2+ months out, shim is justified. Otherwise, build native.
-
-### Visualization
-
-```mermaid
-flowchart TD
-    A[New Feature Requirement] --> B{Is legacy system<br/>retiring soon?}
-    B -->|Yes, <6 months| C{Is native build<br/>feasible in timeline?}
-    B -->|No| D{Would native take<br/>>3x longer?}
-    
-    C -->|Yes| E[Build Native]
-    C -->|No| F[Build Shim]
-    D -->|Yes| G[Build Shim with<br/>Deprecation Plan]
-    D -->|No| E
-    
-    F --> H[Document sunset date]
-    G --> H
-    
-    style E fill:#90EE90
-    style F fill:#FFE4B5
-    style G fill:#FFE4B5
-    style H fill:#FFB6C1
-```
 
 ---
 
@@ -107,40 +69,6 @@ flowchart TB
     end
 ```
 
-```mermaid
-flowchart LR
-    subgraph Callers["Calling Domains (Clean)"]
-        FEED[Feed Node]
-        CART[Cart Node]
-        CHECKOUT[Checkout Node]
-    end
-    
-    subgraph Owners["Owning Domains (Shim Here)"]
-        FEE[Fee Node]
-        STORE[Store Node]
-        GEO[Geography Node]
-    end
-    
-    subgraph Legacy["Legacy Systems (Hidden)"]
-        QA[Quote Adjuster]
-        MX[MX Service]
-        MAPS[Legacy Maps]
-    end
-    
-    FEED --> FEE
-    FEED --> STORE
-    CART --> FEE
-    CHECKOUT --> FEE
-    
-    FEE -.->|shim| QA
-    STORE -.->|shim| MX
-    GEO -.->|shim| MAPS
-    
-    style Callers fill:#E8F5E9
-    style Owners fill:#FFF3E0
-    style Legacy fill:#FFEBEE
-```
-
 ---
 
 ## Principle 2: Shims Own Entity Translation — PRNs In, Legacy IDs Out
@@ -167,28 +95,6 @@ Shims are responsible for all conversions between Pedregal-native entities (PRNs
 | `Location { lat, lng, h3_index }` | `{"latitude": x, "longitude": y}` | Project to legacy format |
 | `Money { amount_micros, currency }` | `{"cents": 1234}` | Convert micros to cents |
 | `FulfillmentType.DELIVERY` | `delivery_type: 1` | Enum to integer mapping |
-
-### Visualization
-
-```mermaid
-sequenceDiagram
-    participant C as Caller Node
-    participant S as Shim
-    participant L as Legacy Service
-    
-    C->>S: GetList(prn:consumer:dd:123)
-    
-    Note over S: Translation: PRN → Legacy ID
-    S->>S: extractID() → 123
-    
-    S->>L: GetConsumerLists(consumer_id=123)
-    L-->>S: LegacyListResponse
-    
-    Note over S: Translation: Legacy → Pedregal
-    S->>S: mapToProto()
-    
-    S-->>C: List Proto (Pedregal native)
-```
 
 ---
 
