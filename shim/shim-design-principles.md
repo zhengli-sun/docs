@@ -48,8 +48,8 @@ Shims should be implemented in the domain node that owns the data, not in the ca
 ```mermaid
 flowchart TB
     subgraph "❌ Anti-pattern: Shim in Caller"
-        F1[Feed Node] -->|"brand=DD"| DD1[DoorDash Legacy]
-        F1 -->|"brand=Wolt"| W1[Wolt Legacy]
+        F1[Feed Node] -->|"brand=Wolt"| DD1[Wolt Legacy]
+        F1 -->|"brand=Deliveroo"| W1[Deliveroo Legacy]
         
         style F1 fill:#FFB6C1
     end
@@ -60,8 +60,8 @@ flowchart TB
     subgraph "✅ Correct: Shim in Leaf Node"
         F2[Feed Node] -->|GetConsumerFees| FEE[Fee Node]
         FEE -->|internal| SHIM[Fee Shim Layer]
-        SHIM -.-> DD2[DoorDash Legacy]
         SHIM -.-> W2[Wolt Legacy]
+        SHIM -.-> D2[Deliveroo Legacy]
         
         style F2 fill:#90EE90
         style FEE fill:#90EE90
@@ -71,7 +71,7 @@ flowchart TB
 
 ---
 
-## Principle 2: Shims Own Entity Translation — PRNs In, Legacy IDs Out
+## Principle 2: Shims Own Entity Translation
 
 ### Principle
 
