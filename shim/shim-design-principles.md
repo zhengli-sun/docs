@@ -48,8 +48,8 @@ Shims should be implemented in the domain node that owns the data, not in the ca
 ```mermaid
 flowchart TB
     subgraph "❌ Anti-pattern: Shim in Caller"
-        F1[Feed Node] -->|"brand=Wolt"| DD1[Wolt Legacy]
-        F1 -->|"brand=Deliveroo"| W1[Deliveroo Legacy]
+        F1[Feed Node] -->|"brand=Wolt"| DD1[Wolt Legacy Fee Service]
+        F1 -->|"brand=Deliveroo"| W1[Deliveroo Legacy Fee Service]
         
         style F1 fill:#FFB6C1
     end
@@ -60,8 +60,8 @@ flowchart TB
     subgraph "✅ Correct: Shim in Leaf Node"
         F2[Feed Node] -->|GetConsumerFees| FEE[Fee Node]
         FEE -->|internal| SHIM[Fee Shim Layer]
-        SHIM -.-> W2[Wolt Legacy]
-        SHIM -.-> D2[Deliveroo Legacy]
+        SHIM -.-> W2[Wolt Legacy Fee Service]
+        SHIM -.-> D2[Deliveroo Legacy Fee Service]
         
         style F2 fill:#90EE90
         style FEE fill:#90EE90
@@ -102,78 +102,49 @@ Shims are responsible for all conversions between Pedregal-native entities (PRNs
 
 ### Principle
 
-As of January 2026, establishing correct domain boundaries and shim architecture takes precedence over latency optimization. Performance solutions exist and can be applied incrementally as we approach production readiness.
+As of January 2026, establishing correct domain boundaries and shim architecture takes precedence over latency optimization. Accept redundant calls and multiple shims hitting the same legacy system. Performance solutions exist and can be applied incrementally as we approach production readiness.
 
-### Why
+### Example
 
-**Current phase priorities**:
-1. ✅ Correct domain modeling
-2. ✅ Clean shim boundaries
-3. ✅ Maintainable code structure
-4. ⏸️ Sub-10ms latency (deferred)
+**Scenario**: A single Feed request triggers multiple calls to the same legacy Subscription system.
 
-**Why deferral is safe**:
+- **Pricing Node** needs subscription benefit info to calculate delivery fee discounts
+- **Promotion Node** needs subscription tier to check promo eligibility
 
-| Concern | Available Solution | When to Apply |
-|---------|-------------------|---------------|
-| Extra network hop latency | Request-level caching | Pre-production |
-| Repeated legacy calls | Talau (Graph Runner cache) | When APIs stabilize |
-| Legacy system slowness | Caching in legacy layer | Production hardening |
-
-**Why premature optimization hurts**:
-- Caches obscure bugs during development
-- Optimized code is harder to refactor
-- Cache invalidation adds complexity
-
-### Visualization
-
-```mermaid
-timeline
-    title Optimization Timeline
-    
-    section Current Phase (Q1 2026)
-        Focus: Domain boundaries, Shim correctness
-        Acceptable: 50-100ms latency
-    
-    section Pre-Production (Q2 2026)
-        Add: Request-level caching, Batch APIs
-        Target: 30-50ms latency
-    
-    section Production (Q3+ 2026)
-        Add: Talau caching, Connection pooling
-        Target: < 20ms latency
-```
+Both nodes independently call their own shims, which both hit the legacy Subscription service.
 
 ```mermaid
 flowchart LR
-    subgraph "Now: Clean Boundaries"
-        F1[Feed] --> FEE1[Fee Node] --> SHIM1[Shim] --> LEG1[Legacy]
-    end
+    FEED[Feed Node] --> PRICING[Pricing Node]
+    FEED --> PROMO[Promotion Node]
     
-    subgraph "Later: Optimized"
-        F2[Feed] --> CACHE[Cache] --> FEE2[Fee Node] --> TALAU[Talau] --> SHIM2[Shim] --> LEG2[Legacy]
-    end
+    PRICING --> P_SHIM[Pricing Shim]
+    PROMO --> PR_SHIM[Promo Shim]
     
-    style CACHE fill:#E3F2FD
-    style TALAU fill:#E3F2FD
-    style SHIM1 fill:#FFE4B5
-    style SHIM2 fill:#FFE4B5
+    P_SHIM -.->|"GetSubscriptionBenefits()"| SUB[Legacy Subscription Service]
+    PR_SHIM -.->|"GetSubscriptionTier()"| SUB
+    
+    style FEED fill:#90EE90
+    style PRICING fill:#90EE90
+    style PROMO fill:#90EE90
+    style P_SHIM fill:#FFE4B5
+    style PR_SHIM fill:#FFE4B5
+    style SUB fill:#FFCDD2
 ```
 
+**Current state**: 2 calls to Subscription Service for one Feed request — this is fine.
+
+**Why not dedupe now?** Pricing and Promo are separate domains. Creating shared subscription-fetching logic couples them and blurs domain boundaries.
+
+**Later optimization**: Add request-level cache. When Pricing shim fetches subscription, cache it. When Promo shim requests it, return cached value. Zero code changes in domain nodes.
+
+### Available Solutions (Apply Later)
+
+| Concern | Solution | When to Apply |
+|---------|----------|---------------|
+| Same data fetched multiple times in one request | Request-level caching | Pre-production |
+| Same data fetched across requests | Talau (Graph Runner cache) | When APIs stabilize |
+| Legacy system becoming bottleneck | Caching in legacy layer | Production hardening |
+| N+1 query patterns | Batch API design | Optimization sprint |
+
 ---
-
-## Quick Reference
-
-| Principle | One-Liner | Key Question |
-|-----------|-----------|--------------|
-| **0. Evaluate First** | Shims are tradeoffs, not defaults | Can we build native in time? |
-| **1. Leaf Nodes** | Shim where data lives, not where it's used | Who owns this data? |
-| **2. Entity Translation** | PRNs in, legacy IDs hidden | Is translation encapsulated? |
-| **3. Boundaries First** | Correct now, fast later | Are we optimizing prematurely? |
-
----
-
-## Related Documentation
-
-- [Shim Examples in Pedregal](./Pedregal-shim-examples.md)
-- [Sandbox Testing Guide](./sandbox-testing-guide.md)
