@@ -98,7 +98,7 @@ Shims are responsible for all conversions between Pedregal-native entities (PRNs
 
 ---
 
-## Principle 3: Defer Performance Optimization — Boundaries Over Latency (For Now)
+## Principle 3: Embrace Redundancy — Boundaries First, Optimize Later
 
 ### Principle
 
