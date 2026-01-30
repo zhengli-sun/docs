@@ -50,8 +50,10 @@ flowchart TB
     subgraph "❌ Anti-pattern: Shim in Caller"
         F1[Feed Node] -->|"brand=Wolt"| DD1[Wolt Legacy Fee Service]
         F1 -->|"brand=Deliveroo"| W1[Deliveroo Legacy Fee Service]
+        F1 -->|"brand=DoorDash"| P1[Fee Node]
         
-        style F1 fill:#FFB6C1
+        style F1 fill:#90EE90
+        style P1 fill:#90EE90
     end
 ```
 
@@ -140,11 +142,10 @@ flowchart LR
 
 ### Available Solutions (Apply Later)
 
-| Concern | Solution | When to Apply |
-|---------|----------|---------------|
-| Same data fetched multiple times in one request | Request-level caching | Pre-production |
-| Same data fetched across requests | Talau (Graph Runner cache) | When APIs stabilize |
-| Legacy system becoming bottleneck | Caching in legacy layer | Production hardening |
-| N+1 query patterns | Batch API design | Optimization sprint |
+| Concern | Solution |
+|---------|----------|
+| Same data fetched multiple times in one request | Request-level caching |
+| Same data fetched across requests | Talau (Graph Runner cache) |
+| Legacy system becoming bottleneck | Caching in legacy layer |
 
 ---
